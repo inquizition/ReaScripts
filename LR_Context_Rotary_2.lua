@@ -45,7 +45,7 @@ end
 
 -- Helper: append message to console
 local function msg(s)
-  reaper.ShowConsoleMsg(toString(s) .. "\n")
+  reaper.ShowConsoleMsg(tostring(s) .. "\n")
 end
 
 -- Heuristic to convert MIDI/OSC value to a signed "ticks" delta
@@ -86,6 +86,17 @@ local function get_encoder_delta(mode, resolution, val, ext_ns, key_suffix)
   return val - last
 end
 
+-- Safe wrapper: works with or without SWS installed
+local function get_env_from_point(x, y)
+  if reaper.GetEnvelopeFromPoint then
+    return reaper.GetEnvelopeFromPoint(x, y)
+  elseif reaper.BR_EnvelopeFromPoint then
+    return reaper.BR_EnvelopeFromPoint(x, y)
+  else
+    return nil
+  end
+end
+
 -- Get hovered things
 local function get_hover_context()
   local ctx = reaper.GetCursorContext() -- 0=tracks,1=items,2=envelopes
@@ -99,7 +110,7 @@ local function get_hover_context()
   local it, _ = reaper.GetItemFromPoint(x, y, false)
   if it then hovered_item = it end
 
-  local hovered_env = reaper.GetEnvelopeFromPoint(x, y)
+  local hovered_env = get_env_from_point(x, y)
 
   return ctx, hovered_track, hovered_item, hovered_env
 end
@@ -217,7 +228,12 @@ local function main()
 
   -- Use sectionID+cmdID to keep "last absolute" separate if you bind multiple instances
   local key_suffix = tostring(sectionID) .. ":" .. tostring(cmdID)
-  local tick_delta = get_encoder_delta(mode, resolution, val, EXT_NS, key_suffix)
+  local tick_delta = val-- get_encoder_delta(mode, resolution, val, EXT_NS, key_suffix)
+  if val < 0 then
+    val = val + 1
+  end
+
+  msg("Delta:" .. tostring(tick_delta))
   if tick_delta == 0 then return end
 
   local ctx, hovered_track, hovered_item, hovered_env = get_hover_context()
