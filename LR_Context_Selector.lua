@@ -112,15 +112,62 @@ local function handle_track_context(tick_delta, hovered_track)
   reaper.SetMediaTrackInfo_Value(hovered_track, "D_VOL", db_to_gain(new_db))
 end
 
--- Item area: adjust hovered item volume in dB
+-- Item area: jump edit cursor between transients within the hovered item
 local function handle_item_context(tick_delta, hovered_item)
   if not hovered_item or tick_delta == 0 then return end
-  local cur_gain = reaper.GetMediaItemInfo_Value(hovered_item, "D_VOL")
-  local cur_db   = gain_to_db(cur_gain)
-  local new_db   = clamp(cur_db + tick_delta * SENS.db_step_per_tick, DB_MIN, DB_MAX)
-  reaper.SetMediaItemInfo_Value(hovered_item, "D_VOL", db_to_gain(new_db))
-  reaper.UpdateItemInProject(hovered_item)
+
+  -- Native actions (Main):
+  -- 40375 = Item navigation: Move cursor to previous transient in items
+  -- 40376 = Item navigation: Move cursor to next transient in items
+  local CMD_PREV = 40375
+  local CMD_NEXT = 40376
+
+  -- Save current item selection
+  
+  local sel = {}
+  local sel_cnt = reaper.CountSelectedMediaItems(0)
+  for i = 0, sel_cnt-1 do sel[#sel+1] = reaper.GetSelectedMediaItem(0, i) end
+
+  -- Temporarily select only the hovered item
+  reaper.Main_OnCommand(40289, 0) -- Unselect all items
+  reaper.SetMediaItemSelected(hovered_item, true)
+  reaper.UpdateArrange()
+
+  -- Move by |tick_delta| steps (encoder may send multiple)
+  local steps = math.abs(tick_delta)
+  local cmd = (tick_delta > 0) and CMD_NEXT or CMD_PREV
+  for _ = 1, steps do
+    reaper.Main_OnCommand(cmd, 0)
+  end
+
+  -- Clamp to hovered item bounds (stay within the item)
+  
+  local curpos = reaper.GetCursorPosition()
+  local it_start = reaper.GetMediaItemInfo_Value(hovered_item, "D_POSITION")
+  local it_len   = reaper.GetMediaItemInfo_Value(hovered_item, "D_LENGTH")
+  local it_end   = it_start + it_len
+  if curpos < it_start then reaper.SetEditCurPos(it_start, false, false) end
+  if curpos > it_end   then reaper.SetEditCurPos(it_end,   false, false) end
+
+  -- Restore previous selection
+  reaper.Main_OnCommand(40289, 0) -- Unselect all items
+  for _, it in ipairs(sel) do
+    if it and reaper.ValidatePtr2(0, it, "MediaItem*") then
+      reaper.SetMediaItemSelected(it, true)
+    end
+  end
+  reaper.UpdateArrange()
 end
+
+-- Item area: adjust hovered item volume in dB
+--local function handle_item_context(tick_delta, hovered_item)
+--  if not hovered_item or tick_delta == 0 then return end
+--  local cur_gain = reaper.GetMediaItemInfo_Value(hovered_item, "D_VOL")
+--  local cur_db   = gain_to_db(cur_gain)
+--  local new_db   = clamp(cur_db + tick_delta * SENS.db_step_per_tick, DB_MIN, DB_MAX)
+--  reaper.SetMediaItemInfo_Value(hovered_item, "D_VOL", db_to_gain(new_db))
+--  reaper.UpdateItemInProject(hovered_item)
+--end
 
 -- Envelope area: adjust SELECTED envelope points by a small step
 -- (keeps it generic for any envelope type; tweak as needed)
