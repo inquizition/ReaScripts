@@ -53,6 +53,11 @@ end
 local function get_encoder_delta(mode, resolution, val, ext_ns, key_suffix)
   -- Relative modes: try to interpret increments/decrements
   if mode and mode > 0 then
+    -- Some encoders (e.g. MIDI Fighter Twister) report signed deltas in
+    -- REAPER. Normalize them so each detent is +/-1 tick.
+    if val < 0 then
+      return val + 1
+    end
     -- 7-bit relatives (common): 1..63 = +ticks, 65..127 = -ticks (2's complement style)
     if resolution == 127 or resolution == 128 then
       if val == 0 then return 0 end
@@ -228,10 +233,7 @@ local function main()
 
   -- Use sectionID+cmdID to keep "last absolute" separate if you bind multiple instances
   local key_suffix = tostring(sectionID) .. ":" .. tostring(cmdID)
-  local tick_delta = val-- get_encoder_delta(mode, resolution, val, EXT_NS, key_suffix)
-  if val < 0 then
-    val = val + 1
-  end
+  local tick_delta = get_encoder_delta(mode, resolution, val, EXT_NS, key_suffix)
 
   msg("Delta:" .. tostring(tick_delta))
   if tick_delta == 0 then return end
