@@ -4,12 +4,13 @@
 local r = reaper
 
 -- ---------- Config ----------
-local base = r.GetResourcePath() .. "/actions"  -- change if you want
+local base = r.GetResourcePath() .. "\\Scripts\\ReaScripts\\actions"  -- change if you want
 local modules = {
   arrange   = base .. "/arrange_actions.lua",
   midi      = base .. "/midi_actions.lua",
   envelope  = base .. "/envelope_actions.lua",
   fallback  = base .. "/fallback_actions.lua",
+  tcp       = base .. "/tcp_actions.lua",
 }
 
 -- ---------- Utils ----------
@@ -56,7 +57,7 @@ local function get_ctx()
     ctx.take   = r.BR_GetMouseCursorContext_Take()
     ctx.env, ctx.env_pt = r.BR_GetMouseCursorContext_Envelope()
     ctx.track  = r.BR_GetMouseCursorContext_Track()
-    ctx.hwnd   = r.BR_GetMouseCursorContext_MIDIEditor() -- nil if not in MIDI editor
+    --ctx.hwnd   = r.BR_GetMouseCursorContext_MIDIEditor() -- nil if not in MIDI editor
   else
     -- Fallback: crude domain detection if SWS is missing
     ctx.hwnd = r.MIDIEditor_GetActive()
@@ -73,6 +74,7 @@ local function get_ctx()
   ctx.has_item    = (ctx.item ~= nil)
   ctx.on_env      = (ctx.segment == "envelope" or ctx.env ~= nil)
   ctx.on_track    = (ctx.segment == "track" and not ctx.has_item and not ctx.on_env)
+  ctx.on_tcp      = (ctx.window == "tcp" and not ctx.on_env)
 
   return ctx
 end
@@ -81,7 +83,19 @@ end
 local function dispatch()
   local ctx = get_ctx()
 
+    -- Debug print
+  reaper.ShowConsoleMsg(string.format(
+    "Window: %s\nSegment: %s\nDetails: %s\nItem: %s\nTrack: %s\nEnvelope: %s\n\n",
+    tostring(ctx.window),
+    tostring(ctx.segment),
+    tostring(ctx.details),
+    ctx.item and "yes" or "no",
+    ctx.track and "yes" or "no",
+    ctx.env and "yes" or "no"
+  ))
+
   local A  = import(modules.arrange)
+  local B  = import(modules.tcp)
   local M  = import(modules.midi)
   local E  = import(modules.envelope)
   local FB = import(modules.fallback)
@@ -102,6 +116,10 @@ local function dispatch()
     if E.onEnvelope and ctx.env then return E.onEnvelope(ctx) end
     if FB.fallback then return FB.fallback(ctx) end
     return
+  end
+
+  if ctx.on_tcp then
+    return B.onTcpRotary(ctx, -0.3, 1)
   end
 
   if ctx.has_item and A.onItem then

@@ -2,15 +2,6 @@
 local r = reaper
 local M = {}
 
-function M.onItem(ctx)
-  -- Example: toggle item mute
-  if ctx.item then
-    local m = r.GetMediaItemInfo_Value(ctx.item, "B_MUTE")
-    r.SetMediaItemInfo_Value(ctx.item, "B_MUTE", (m == 1) and 0 or 1)
-    r.UpdateArrange()
-  end
-end
-
 function M.onTrack(ctx)
   -- Example: select track under mouse
   if ctx.track then
@@ -18,12 +9,7 @@ function M.onTrack(ctx)
   end
 end
 
-function M.onArrange(ctx)
-  -- Example: nudge edit cursor by grid
-  r.Main_OnCommand(40647, 0) -- Item: Nudge right by grid (as a placeholder action)
-end
-
-function M.onArrangeSelector(ctx, click, val)
+function M.onTcpSelector(ctx, click, val)
   -- Example: select track under mouse
   if click then
     r.SetOnlyTrackSelected(ctx.track)
@@ -33,7 +19,7 @@ function M.onArrangeSelector(ctx, click, val)
   r.CSurf_OnPanChange(ctx.track, val, false) -- [-1.0, 1.0]Change to midi values
 end
 
-function M.onArrangeRotary(ctx, val, idx)
+function M.onTcpRotary(ctx, val, idx)
   -- Example: nudge edit cursor by grid
     if idx == 1 then
         r.CSurf_OnPanChange(ctx.track, val, false) -- [-1.0, 1.0]Change to midi values
@@ -61,7 +47,7 @@ function M.onArrangeRotary(ctx, val, idx)
     end
 end
 
-function M.onArrangePad(ctx, idx)
+function M.onTcpPad(ctx, idx)
   -- Example: nudge edit cursor by grid
     if idx == 1 then
         r.SetOnlyTrackSelected(ctx.track)    
@@ -89,7 +75,7 @@ function M.onArrangePad(ctx, idx)
     end
 end
 
-function M.onArrangeSlider(ctx, val, idx)
+function M.onTcpSlider(ctx, val, idx)
   -- Example: nudge edit cursor by grid
     if idx == 1 then
         r.CSurf_OnPanChange(ctx.track, val, false) -- [-1.0, 1.0]Change to midi values
