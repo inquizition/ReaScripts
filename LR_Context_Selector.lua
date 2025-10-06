@@ -115,6 +115,41 @@ local function get_hover_context()
   return ctx, hovered_track, hovered_item, hovered_env
 end
 
+-- SETTINGS (add near your other SENS)
+local ENV = {
+  use_grid = true,            -- true: step by current grid; false: fixed seconds
+  nav_step_seconds = 0.020,   -- used when use_grid=false
+  clamp_to_proj = true,       -- avoid going <0 or >project end
+
+  select_nearest_always = true,
+  select_thresh_seconds = 0.030,
+  clear_sel_if_none = false,
+}
+
+-- Find nearest envelope point to time t
+local function find_nearest_point(env, t)
+  local cnt = reaper.CountEnvelopePoints(env)
+  if cnt == 0 then return -1, math.huge end
+  local best_i, best_dt = -1, math.huge
+  for i = 0, cnt - 1 do
+    local ok, pt_t = reaper.GetEnvelopePoint(env, i)
+    if ok then
+      local d = math.abs(pt_t - t)
+      if d < best_dt then best_dt, best_i = d, i end
+    end
+  end
+  return best_i, best_dt
+end
+
+local function grid_step_seconds(at_time)
+  local _, qn_div = reaper.GetSetProjectGrid(0, false, 0, 0, 0) -- division in QN
+  if (not qn_div) or qn_div <= 0 then return ENV.nav_step_seconds end
+  local qn = reaper.TimeMap2_timeToQN(0, at_time)
+  local t0 = reaper.TimeMap2_QNToTime(0, qn)
+  local t1 = reaper.TimeMap2_QNToTime(0, qn + qn_div)
+  return math.max(1e-6, t1 - t0)
+end
+
 ----------------------------------------
 -- DEFAULT CONTEXT HANDLERS
 ----------------------------------------
@@ -189,27 +224,54 @@ end
 -- (keeps it generic for any envelope type; tweak as needed)
 local function handle_envelope_context(tick_delta, env)
   if not env or tick_delta == 0 then return end
-  local cnt = reaper.CountEnvelopePoints(env)
-  if cnt == 0 then return end
 
-  local any_sel = false
-  for i = 0, cnt - 1 do
-    local rv, time, val, shape, tens, sel = reaper.GetEnvelopePoint(env, i)
-    if rv and sel then any_sel = true break end
+  local cur = reaper.GetCursorPosition()
+  local step
+  if ENV.use_grid then
+    local _, qn_div = reaper.GetSetProjectGrid(0, false, 0, 0, 0)
+    if (not qn_div) or qn_div <= 0 then
+      step = ENV.nav_step_seconds
+    else
+      local qn  = reaper.TimeMap2_timeToQN(0, cur)
+      local t0  = reaper.TimeMap2_QNToTime(0, qn)
+      local t1  = reaper.TimeMap2_QNToTime(0, qn + qn_div)
+      step = math.max(1e-6, t1 - t0)
+    end
+  else
+    step = ENV.nav_step_seconds
   end
-  if not any_sel then return end
 
-  -- Apply small linear nudge to selected points, then sort.
-  for i = 0, cnt - 1 do
-    local rv, time, val, shape, tens, sel = reaper.GetEnvelopePoint(env, i)
-    if rv and sel then
-      local new_val = val + tick_delta * SENS.env_step
-      -- Best-effort clamping. Many envelopes are 0..1; adjust if needed per envelope type.
-      new_val = clamp(new_val, 0.0, 1.0)
-      reaper.SetEnvelopePoint(env, i, time, new_val, shape, tens, sel, true)
+  local newt = cur + (tick_delta * step)
+
+  if ENV.clamp_to_proj then
+    local proj_end = reaper.GetProjectLength(0)
+    if newt < 0 then newt = 0 end
+    if newt > proj_end then newt = proj_end end
+  end
+
+  reaper.SetEditCurPos(newt, false, false)
+
+  -- Auto-select nearest envelope point
+  local idx, dt = find_nearest_point(env, newt)
+  if idx >= 0 then
+    if ENV.select_nearest_always or (dt <= ENV.select_thresh_seconds) then
+      -- Make that point exclusively selected
+      local cnt = reaper.CountEnvelopePoints(env)
+      for i = 0, cnt - 1 do
+        local ok, pt_t, pt_v, sh, te, sel = reaper.GetEnvelopePoint(env, i)
+        if ok then reaper.SetEnvelopePoint(env, i, pt_t, pt_v, sh, te, i == idx, true) end
+      end
+      reaper.Envelope_SortPoints(env)
+    elseif ENV.clear_sel_if_none then
+      -- Clear any selection if nothing close enough
+      local cnt = reaper.CountEnvelopePoints(env)
+      for i = 0, cnt - 1 do
+        local ok, pt_t, pt_v, sh, te, sel = reaper.GetEnvelopePoint(env, i)
+        if ok and sel then reaper.SetEnvelopePoint(env, i, pt_t, pt_v, sh, te, false, true) end
+      end
+      reaper.Envelope_SortPoints(env)
     end
   end
-  reaper.Envelope_SortPoints(env)
 end
 
 ----------------------------------------

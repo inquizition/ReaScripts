@@ -109,27 +109,56 @@ end
 
 -- Envelope area: adjust SELECTED envelope points by a small step
 -- (keeps it generic for any envelope type; tweak as needed)
-local function handle_envelope_context(norm, env)
-  if not env then return end
-  local cnt = reaper.CountEnvelopePoints(env)
-  if cnt == 0 then return end
+local function handle_envelope_context(norm, hovered_env)
+  if not hovered_env then return end
 
-  local any_sel = false
-  for i = 0, cnt - 1 do
-    local rv, time, val, shape, tens, sel = reaper.GetEnvelopePoint(env, i)
-    if rv and sel then any_sel = true break end
+  local cur = reaper.GetCursorPosition()
+  local step
+  if ENV.use_grid then
+    local _, qn_div = reaper.GetSetProjectGrid(0, false, 0, 0, 0)
+    if (not qn_div) or qn_div <= 0 then
+      step = ENV.nav_step_seconds
+    else
+      local qn  = reaper.TimeMap2_timeToQN(0, cur)
+      local t0  = reaper.TimeMap2_QNToTime(0, qn)
+      local t1  = reaper.TimeMap2_QNToTime(0, qn + qn_div)
+      step = math.max(1e-6, t1 - t0)
+    end
+  else
+    step = ENV.nav_step_seconds
   end
-  if not any_sel then return end
 
-  -- Apply slider position to selected points, then sort.
-  for i = 0, cnt - 1 do
-    local rv, time, val, shape, tens, sel = reaper.GetEnvelopePoint(env, i)
-    if rv and sel then
-      local new_val = clamp(norm, 0.0, 1.0)
-      reaper.SetEnvelopePoint(env, i, time, new_val, shape, tens, sel, true)
+  local newt = norm 
+
+  if ENV.clamp_to_proj then
+    local proj_end = reaper.GetProjectLength(0)
+    if newt < 0 then newt = 0 end
+    if newt > proj_end then newt = proj_end end
+  end
+
+  reaper.SetEditCurPos(newt, false, false)
+
+  -- Auto-select nearest envelope point
+  local idx, dt = find_nearest_point(hovered_env, newt)
+  if idx >= 0 then
+    if ENV.select_nearest_always or (dt <= ENV.select_thresh_seconds) then
+      -- Make that point exclusively selected
+      local cnt = reaper.CountEnvelopePoints(hovered_env)
+      for i = 0, cnt - 1 do
+        local ok, pt_t, pt_v, sh, te, sel = reaper.GetEnvelopePoint(hovered_env, i)
+        if ok then reaper.SetEnvelopePoint(hovered_env, i, pt_t, pt_v, sh, te, i == idx, true) end
+      end
+      reaper.Envelope_SortPoints(hovered_env)
+    elseif ENV.clear_sel_if_none then
+      -- Clear any selection if nothing close enough
+      local cnt = reaper.CountEnvelopePoints(hovered_env)
+      for i = 0, cnt - 1 do
+        local ok, pt_t, pt_v, sh, te, sel = reaper.GetEnvelopePoint(hovered_env, i)
+        if ok and sel then reaper.SetEnvelopePoint(hovered_env, i, pt_t, pt_v, sh, te, false, true) end
+      end
+      reaper.Envelope_SortPoints(hovered_env)
     end
   end
-  reaper.Envelope_SortPoints(env)
 end
 
 ----------------------------------------
