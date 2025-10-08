@@ -83,7 +83,20 @@ end
 function M.onEnvelopeSlider(ctx, val, idx)
   -- Example: nudge edit cursor by grid
     if idx == 1 then
-        r.CSurf_OnPanChange(ctx.track, val, false) -- [-1.0, 1.0]Change to midi values
+        --r.CSurf_OnPanChange(ctx.track, val, false) -- [-1.0, 1.0]Change to midi values
+        env = r.GetSelectedEnvelope(0)
+        if not env then return end
+
+        count = r.CountEnvelopePoints(env)
+        for i = 0, count-1 do
+            local retval, time, value, shape, tension, selected = r.GetEnvelopePoint(env, i)
+            if selected then
+                r.SetEnvelopePoint(env, i, time, 0.75, shape, tension, selected, true)
+            end
+        end
+        r.Envelope_SortPoints(env)
+        r.UpdateArrange()
+        --r.Main_OnCommand(41987, val) -- Envelope: Set shape: linear
     end
     if idx == 2 then
         r.CSurf_OnPanChange(ctx.track, val, false) -- [-1.0, 1.0]Change to midi values

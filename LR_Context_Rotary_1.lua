@@ -119,7 +119,7 @@ local function dispatch()
   end
 
   if ctx.on_tcp then
-    return B.onTcpRotary(ctx, -0.3, 1)
+    return B.onTcpSelector(ctx, false, -4)
   end
 
   if ctx.has_item and A.onItem then

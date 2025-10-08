@@ -100,30 +100,6 @@ local function dispatch()
   local E  = import(modules.envelope)
   local FB = import(modules.fallback)
 
-  if ctx.on_env then
-    if E.onEnvelopePoint and ctx.env_pt then return E.onEnvelopePoint(ctx) end
-    if E.onEnvelope and ctx.env then return E.onEnvelopeSlider(ctx, 10, 1) end
-    if FB.fallback then return FB.fallback(ctx) end
-    return
-  end
-
-  if ctx.on_tcp then
-    return B.onTcpSelector(ctx, false, -4)
-  end
-
-  if ctx.on_track and A.onTrack then
-    return A.onArrangeSelector(ctx, true, 1)
-  end
-
-
-  if A.onArrange and ctx.is_arrange then
-    return A.onArrangeSelector(ctx, true, 1)
-  end
-
-  if ctx.has_item and A.onItem then
-    return A.onItem(ctx)
-  end
-
   -- Priority: MIDI editor > Envelope > Item > Track > Fallback
   if ctx.is_midi then
     -- More granular MIDI routing using SWS details if present
@@ -133,6 +109,29 @@ local function dispatch()
     if M.onMIDIEditor then return M.onMIDIEditor(ctx) end
     if FB.fallback then return FB.fallback(ctx) end
     return
+  end
+
+  if ctx.on_env then
+    if E.onEnvelopePoint and ctx.env_pt then return E.onEnvelopePoint(ctx) end
+    if E.onEnvelope and ctx.env then return E.onEnvelope(ctx) end
+    if FB.fallback then return FB.fallback(ctx) end
+    return
+  end
+
+  if ctx.on_tcp then
+    return B.onTcpSelector(ctx, true, 0)
+  end
+
+  if ctx.has_item and A.onItem then
+    return A.onItem(ctx)
+  end
+
+  if ctx.on_track and A.onTrack then
+    return A.onTrack(ctx)
+  end
+
+  if A.onArrange and ctx.is_arrange then
+    return A.onArrange(ctx)
   end
 
   if FB.fallback then

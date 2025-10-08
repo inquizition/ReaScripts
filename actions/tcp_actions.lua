@@ -12,11 +12,17 @@ end
 function M.onTcpSelector(ctx, click, val)
   -- Example: select track under mouse
   if click then
-    r.SetOnlyTrackSelected(ctx.track)
+        r.Main_OnCommand(40113, 1) -- Prev track
     return
   end
-  
-  r.CSurf_OnPanChange(ctx.track, val, false) -- [-1.0, 1.0]Change to midi values
+    if val>0 then
+        r.Main_OnCommand(40285, val) --Next track 
+    end
+    if val<0 then
+        r.Main_OnCommand(40286, val) -- Prev track
+    end
+  --id = reaper.NamedCommandLookup("_SWS_VZOOMFIT")
+  --r.Main_OnCommand(id, val) -- Envelope: Set shape: linear
 end
 
 function M.onTcpRotary(ctx, val, idx)
@@ -87,7 +93,13 @@ function M.onTcpSlider(ctx, val, idx)
         r.CSurf_OnPanChange(ctx.track, val, false) -- [-1.0, 1.0]Change to midi values
     end
     if idx == 4 then
-        r.CSurf_OnPanChange(ctx.track, val, false) -- [-1.0, 1.0]Change to midi values
+
+        r.Main_OnCommand(40297, 0) -- Envelope: Insert point at current position
+        local id = reaper.NamedCommandLookup("_BR_SEL_TCP_TRACK_MOUSE")
+        r.Main_OnCommand(id, val) -- Envelope: Set shape: linear
+        id = reaper.NamedCommandLookup("_SWS_VZOOMFIT")
+        r.Main_OnCommand(id, val) -- Envelope: Set shape: linear
+        --r.CSurf_OnPanChange(ctx.track, val, false) -- [-1.0, 1.0]Change to midi values
     end
 end
 
