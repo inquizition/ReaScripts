@@ -12,7 +12,6 @@ local modules = {
   fallback  = base .. "/fallback_actions.lua",
   tcp       = base .. "/tcp_actions.lua",
   focus_handler = base .. "/focus_handler.lua",
-  fx_handler = base .. "/FX_actions.lua",
 }
 
 -- ---------- Utils ----------
@@ -141,18 +140,22 @@ local function dispatch()
   local E  = import(modules.envelope)
   local FB = import(modules.fallback)
   local FH = import(modules.focus_handler)
-  local FX = import(modules.fx_handler)
 
   local zoom_id = reaper.NamedCommandLookup("_SWS_TOGZOOMTTHIDE")
   local focused = reaper.GetToggleCommandState(zoom_id)
 
   if focused == 1 then
     reaper.ShowConsoleMsg(string.format("Focused track!\n"))
+    FH.moveOnFocused(ctx, val)
     return
   end
 
-  FX.SetSelectedTrackVolume(ctx, val)
-
+  if val>0 then
+      r.Main_OnCommand(40285, val) --Next track 
+  end
+  if val<0 then
+      r.Main_OnCommand(40286, val) -- Prev track
+  end
  
   if FB.fallback then
     return FB.fallback(ctx)
@@ -162,5 +165,3 @@ end
 r.Undo_BeginBlock()
 dispatch()
 r.Undo_EndBlock("ContextRouter", -1)
-
-

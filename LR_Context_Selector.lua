@@ -74,13 +74,30 @@ local function get_ctx()
   ctx.has_item    = (ctx.item ~= nil)
   ctx.on_env      = (ctx.segment == "envelope" or ctx.env ~= nil)
   ctx.on_track    = (ctx.segment == "track" and not ctx.has_item and not ctx.on_env)
-  ctx.on_tcp      = (ctx.window == "tcp" and not ctx.on_env)
+  ctx.on_tcp      = (ctx.window == "tcp")
 
   return ctx
 end
 
 -- ---------- Dispatch ----------
 local function dispatch()
+
+  -- Returns contextual information about the script, typically MIDI/OSC input values.
+  -- val will be set to a relative or absolute value depending on mode (=0: absolute mode, >0: relative modes).
+  -- resolution=127 for 7-bit resolution, =16383 for 14-bit resolution.
+  -- sectionID, and cmdID will be set to -1 if the script is not part of the action list.
+  -- mode, resolution and val will be set to -1 if the script was not triggered via MIDI/OSC.
+  -- contextstr may be empty or one of:
+  
+  
+  --     midi:XX[:YY] (one or two bytes hex)
+  --     [wheel|hwheel|mtvert|mthorz|mtzoom|mtrot|mediakbd]:flags
+  --     key:flags:keycode
+  --     osc:/msg[:f=FloatValue|:s=StringValue]
+  --     KBD_OnMainActionEx
+  
+  -- (flags may include V=virtkey, S=shift, A=alt/option, C=control/command, W=win/control)
+  is_new_value,filename,sectionID,cmdID,mode,resolution,val,contextstr = reaper.get_action_context()
   local ctx = get_ctx()
 
     -- Debug print
@@ -93,6 +110,7 @@ local function dispatch()
     ctx.track and "yes" or "no",
     ctx.env and "yes" or "no"
   ))
+  reaper.ShowConsoleMsg("Knob val:"..tostring(val))
 
   local A  = import(modules.arrange)
   local B  = import(modules.tcp)
@@ -100,24 +118,24 @@ local function dispatch()
   local E  = import(modules.envelope)
   local FB = import(modules.fallback)
 
-  if ctx.on_env then
-    if E.onEnvelopePoint and ctx.env_pt then return E.onEnvelopePoint(ctx) end
-    if E.onEnvelope and ctx.env then return E.onEnvelope(ctx) end
-    if FB.fallback then return FB.fallback(ctx) end
-    return
-  end
 
   if ctx.on_tcp then
-    return B.onTcpSelector(ctx, false, -4)
+    return B.onTcpSelector(ctx, false, val)
+  end
+
+  if A.onArrange and ctx.is_arrange then
+    return A.onArrangeSelector(ctx, true, val)
   end
 
   if ctx.on_track and A.onTrack then
-    return A.onArrangeSelector(ctx, true, 1)
+    return A.onArrangeSelector(ctx, true, val)
   end
 
-
-  if A.onArrange and ctx.is_arrange then
-    return A.onArrangeSelector(ctx, true, 1)
+  if ctx.on_env then
+    if E.onEnvelopePoint and ctx.env_pt then return E.onEnvelopePoint(ctx) end
+    if E.onEnvelope and ctx.env then return E.onEnvelopeSelector(ctx, false, val) end
+    if FB.fallback then return FB.fallback(ctx) end
+    return
   end
 
   if ctx.has_item and A.onItem then

@@ -11,18 +11,34 @@ end
 
 function M.onTcpSelector(ctx, click, val)
   -- Example: select track under mouse
+  local zoom_id = reaper.NamedCommandLookup("_SWS_TOGZOOMTTHIDE")
+  local zoomed = reaper.GetToggleCommandState(zoom_id)
   if click then
-        r.Main_OnCommand(40113, 1) -- Prev track
+        if zoomed == 1 then
+            r.Main_OnCommand(zoom_id, 1) --
+            r.Main_OnCommand(40110, 1) --
+        end
+        if zoomed == 0 then
+            r.Main_OnCommand(zoom_id, 1) --
+        end
     return
   end
-    if val>0 then
-        r.Main_OnCommand(40285, val) --Next track 
-    end
-    if val<0 then
-        r.Main_OnCommand(40286, val) -- Prev track
-    end
-  --id = reaper.NamedCommandLookup("_SWS_VZOOMFIT")
-  --r.Main_OnCommand(id, val) -- Envelope: Set shape: linear
+
+  reaper.ShowConsoleMsg("zoomed:"..tostring(zoomed))
+
+  if zoomed == 1 then
+    r.Main_OnCommand(zoom_id, 1) --
+  end
+
+  if val>0 then
+      r.Main_OnCommand(40285, val) --Next track 
+  end
+  if val<0 then
+      r.Main_OnCommand(40286, val) -- Prev track
+  end
+  if zoomed == 1 then
+      r.Main_OnCommand(zoom_id, 1) --
+  end
 end
 
 function M.onTcpRotary(ctx, val, idx)

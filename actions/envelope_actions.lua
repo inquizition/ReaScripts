@@ -20,8 +20,15 @@ function M.onEnvelopeSelector(ctx, click, val)
     r.SetOnlyTrackSelected(ctx.track)
     return
   end
-  
-  r.CSurf_OnPanChange(ctx.track, val, false) -- [-1.0, 1.0]Change to midi values
+
+  if val > 0 then
+      id = reaper.NamedCommandLookup("_SWS_BRMOVEEDITSELNEXTENV")
+      r.Main_OnCommand(id, val) -- Envelope: 
+  end
+  if val < 0 then
+      id = reaper.NamedCommandLookup("_SWS_BRMOVEEDITSELPREVENV")
+      r.Main_OnCommand(id, val) -- Envelope: 
+  end 
 end
 
 function M.onEnvelopeRotary(ctx, val, idx)
