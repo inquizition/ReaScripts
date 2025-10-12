@@ -101,15 +101,15 @@ local function dispatch()
   local ctx = get_ctx()
 
     -- Debug print
-  reaper.ShowConsoleMsg(string.format(
-    "Window: %s\nSegment: %s\nDetails: %s\nItem: %s\nTrack: %s\nEnvelope: %s\n\n",
-    tostring(ctx.window),
-    tostring(ctx.segment),
-    tostring(ctx.details),
-    ctx.item and "yes" or "no",
-    ctx.track and "yes" or "no",
-    ctx.env and "yes" or "no"
-  ))
+  --reaper.ShowConsoleMsg(string.format(
+  --  "Window: %s\nSegment: %s\nDetails: %s\nItem: %s\nTrack: %s\nEnvelope: %s\n\n",
+  --  tostring(ctx.window),
+  --  tostring(ctx.segment),
+  --  tostring(ctx.details),
+  --  ctx.item and "yes" or "no",
+  --  ctx.track and "yes" or "no",
+  --  ctx.env and "yes" or "no"
+  --))
 
   local A  = import(modules.arrange)
   local B  = import(modules.tcp)

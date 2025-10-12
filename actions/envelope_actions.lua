@@ -20,6 +20,7 @@ function M.onEnvelope(ctx)
   r.Main_OnCommand(40332, 0) -- Envelope: Insert point at current position
 end
 
+
 local function sws_ok() return r.APIExists("BR_GetMouseCursorContext") end
 
 local function env_has_selected_points(env)
@@ -44,7 +45,7 @@ local function set_env_value_display(disp_value, opts)
 
   local take_id = -1
   local have_sel = env_has_selected_points(env)
-  dbg(opts, "Have selected points: %s\n", tostring(have_sel))
+  --dbg(opts, "Have selected points: %s\n", tostring(have_sel))
 
   -- r.Undo_BeginBlock(); r.PreventUIRefresh(1) -- (Uncomment if you want full UI wrapping here)
 
@@ -67,7 +68,7 @@ local function set_env_value_display(disp_value, opts)
       r.BR_GetMouseCursorContext() -- must call first
       mouse_env = select(1, r.BR_GetMouseCursorContext_Envelope())
       mouse_t   = r.BR_GetMouseCursorContext_Position()
-      dbg(opts, "Mouse time: %s, mouse env: %s\n", tostring(mouse_t), tostring(mouse_env))
+      --dbg(opts, "Mouse time: %s, mouse env: %s\n", tostring(mouse_t), tostring(mouse_env))
     else
       dbg(opts, "SWS extension not available.\n")
     end
@@ -101,6 +102,19 @@ end
 --   - scaling == 0: map CC→[-1..+1] (your behavior).
 --   - scaling != 0: treat CC as dB range -> amplitude -> ScaleToEnvelopeMode.
 function M.SetEnvFromCC_Absolute(cc, min_disp, max_disp, opts)
+
+    -- ReaScript: throttle to >=5 ms per action trigger
+    local THRESH = 0.005 -- seconds
+    
+    local is_new, _, sectionID, cmdID = reaper.get_action_context()
+    local key = ("CC_THROTTLE_%d_%d"):format(sectionID or 0, cmdID or 0)
+    
+    local now = reaper.time_precise()
+    local last = tonumber(reaper.GetExtState("CC_THROTTLE", key)) or 0
+    
+    if (now - last) < THRESH then return end
+    reaper.SetExtState("CC_THROTTLE", key, string.format("%.9f", now), false)
+
   opts = opts or {}
   local env = r.GetSelectedEnvelope(0)
   if not env then
@@ -113,7 +127,7 @@ function M.SetEnvFromCC_Absolute(cc, min_disp, max_disp, opts)
 
   -- Determine envelope scaling mode
   local scaling = r.GetEnvelopeScalingMode(env)  -- 0 = linear/raw, 1 = fader taper (e.g., volume)
-  dbg(opts, "Scaling mode: %s\n", tostring(scaling))
+  --dbg(opts, "Scaling mode: %s\n", tostring(scaling))
 
   -- Compute the new value once (no need to iterate over points)
   local new_val
@@ -129,7 +143,7 @@ function M.SetEnvFromCC_Absolute(cc, min_disp, max_disp, opts)
     new_val   = r.ScaleToEnvelopeMode(scaling, amp)
   end
 
-  dbg(opts, "CC=%s → norm=%.3f → new_val=%.6f\n", tostring(cc), norm, new_val)
+  --dbg(opts, "CC=%s → norm=%.3f → new_val=%.6f\n", tostring(cc), norm, new_val)
   set_env_value_display(new_val, opts)
 end
 

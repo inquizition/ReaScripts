@@ -122,18 +122,18 @@ local function dispatch()
   local ctx = get_ctx()
 
     -- Debug print
-  reaper.ShowConsoleMsg(string.format(
-    "Window: %s\nSegment: %s\nDetails: %s\nItem: %s\nTrack: %s\nEnvelope: %s\nTrack Selected: %s\nEnvelope Selected: %s\n\n",
-    tostring(ctx.window),
-    tostring(ctx.segment),
-    tostring(ctx.details),
-    ctx.item and "yes" or "no",
-    ctx.track and "yes" or "no",
-    ctx.env and "yes" or "no",
-    ctx.track_sel and "yes" or "no",
-    ctx.env_sel and "yes" or "no"
-  ))
-  reaper.ShowConsoleMsg(string.format("Knob val: %s\n", tostring(val)))
+  --reaper.ShowConsoleMsg(string.format(
+  --  "Window: %s\nSegment: %s\nDetails: %s\nItem: %s\nTrack: %s\nEnvelope: %s\nTrack Selected: %s\nEnvelope Selected: %s\n\n",
+  --  tostring(ctx.window),
+  --  tostring(ctx.segment),
+  --  tostring(ctx.details),
+  --  ctx.item and "yes" or "no",
+  --  ctx.track and "yes" or "no",
+  --  ctx.env and "yes" or "no",
+  --  ctx.track_sel and "yes" or "no",
+  --  ctx.env_sel and "yes" or "no"
+  --))
+  --reaper.ShowConsoleMsg(string.format("Knob val: %s\n", tostring(val)))
 
   local A  = import(modules.arrange)
   local B  = import(modules.tcp)
@@ -147,7 +147,7 @@ local function dispatch()
   local focused = reaper.GetToggleCommandState(zoom_id)
 
   if focused == 1 then
-    reaper.ShowConsoleMsg(string.format("Focused track!\n"))
+    --reaper.ShowConsoleMsg(string.format("Focused track!\n"))
     --FH.moveOnFocused(ctx, val)
     return
   end

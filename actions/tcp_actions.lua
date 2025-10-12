@@ -24,7 +24,7 @@ function M.onTcpSelector(ctx, click, val)
     return
   end
 
-  reaper.ShowConsoleMsg("zoomed:"..tostring(zoomed))
+  --reaper.ShowConsoleMsg("zoomed:"..tostring(zoomed))
 
   if zoomed == 1 then
     r.Main_OnCommand(zoom_id, 1) --

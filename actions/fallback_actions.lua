@@ -4,7 +4,7 @@ local M = {}
 
 function M.fallback(ctx)
   -- Last-resort action when nothing else matched
-  r.ShowConsoleMsg("ContextRouter: no specific context matched.\n")
+  ---r.ShowConsoleMsg("ContextRouter: no specific context matched.\n")
 end
 
 return M
